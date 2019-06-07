@@ -1,9 +1,9 @@
-# Change Log
+# Changelog
 
-All notable changes to the "simons-cpp-tools" extension will be documented in this file.
+All notable changes to the `Simon's C++ Tools` extension will be documented in this file.
 
-Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+## [0.0.1] - 2019-06-07
 
-## [Unreleased]
-
-- Initial release
+### Added
+- `cpptools.addInclude` command
+- `cpptools.switchHeaderSource` command
