@@ -1,3 +1,6 @@
+import { TextEditor, TextEditorEdit } from "vscode";
+import * as vscode from 'vscode';
+
 export interface IncludeInsertion {
   offset: number;
   includeStatement: string;
@@ -356,4 +359,29 @@ export function addInclude(
   } else {
     throw new Error("Invalid include statement.");
   }
+}
+
+export function addIncludeCommand() {
+  const textEditor = vscode.window.activeTextEditor;
+  if (!textEditor) {
+    return;
+  }
+
+  vscode.window.showInputBox({
+    value: "#include <some_header.hpp>",
+    valueSelection: [9, 26]
+  }).then((value) => {
+    if (value) {
+      const insertion = addInclude(textEditor.document.getText(), value);
+      const position = textEditor.document.positionAt(insertion.offset);
+      // console.log(`Inserting ${insertion.includeStatement.replace('\n', '\\n')} at ${position.line}:${position.character}`);
+
+      textEditor.edit((edit) => {
+        edit.insert(
+          position,
+          insertion.includeStatement
+        );
+      });
+    }
+  });
 }
