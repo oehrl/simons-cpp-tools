@@ -10,14 +10,21 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:cpptools.addInclude"
+		"onCommand:cpptools.addInclude",
+		"onCommand:cpptools.switchHeaderSource"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
-		"commands": [{
-			"command": "cpptools.addInclude",
-			"title": "Add Include"
-		}]
+		"commands": [
+			{
+				"command": "cpptools.addInclude",
+				"title": "Add Include"
+			},
+			{
+				"command": "cpptools.switchHeaderSource",
+				"title": "C++ Tools: Switch Header/Source"
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
