@@ -230,6 +230,15 @@ const systemIncludes = [
   'cstdbool',
 ];
 
+function prioritizedIncludePosition(...positions: number[]) {
+  for (const position of positions) {
+    if (position >= 0) {
+      return position;
+    }
+  }
+  return -1;
+}
+
 export function addInclude(
   code: string,
   includeStatement: string): IncludeInsertion {
@@ -248,44 +257,52 @@ export function addInclude(
   const localIncludeRegex = /[ \t]*#[ \t]*include[ \t]*\"([\w- .]+)\"[^\n]*\n/g;
   const globalIncludeRegex = /[ \t]*#[ \t]*include[ \t]*<([\w- .]+)>[^\n]*\n/g;
 
-  let systemInsertOffset = -1;
-  let globalInsertOffset = -1;
-  let localInsertOffset = -1;
+  let systemIncludesBegin = -1;
+  let systemIncludesEnd = -1;
+  let globalIncludesBegin = -1;
+  let globalIncludesEnd = -1;
+  let localIncludesBegin = -1;
+  let localIncludesEnd = -1;
 
   let match;
   while (match = globalIncludeRegex.exec(code)) {
     if (systemIncludes.indexOf(match[1]) !== -1) {
-      systemInsertOffset = match.index + match[0].length;
-
-      if (globalInsertOffset < 0) {
-        globalInsertOffset = systemInsertOffset;
+      if (systemIncludesBegin < 0) {
+        systemIncludesBegin = match.index;
       }
-      if (localInsertOffset < 0) {
-        localInsertOffset = systemInsertOffset;
-      }
+      systemIncludesEnd = match.index + match[0].length;
     } else {
-      globalInsertOffset = match.index + match[0].length;
-
-      if (systemInsertOffset < 0) {
-        systemInsertOffset = match.index;
+      if (globalIncludesBegin < 0) {
+        globalIncludesBegin = match.index;
       }
-      if (localInsertOffset < 0) {
-        localInsertOffset = globalInsertOffset;
-      }
+      globalIncludesEnd = match.index + match[0].length;
     }
   }
   while (match = localIncludeRegex.exec(code)) {
-    localInsertOffset = match.index + match[0].length;
-
-    if (systemInsertOffset < 0) {
-      systemInsertOffset = match.index;
+    if (localIncludesBegin < 0) {
+      localIncludesBegin = match.index;
     }
-    if (globalInsertOffset < 0) {
-      globalInsertOffset = match.index;
-    }
+    localIncludesEnd = match.index + match[0].length;
   }
 
-  if (systemInsertOffset < 0) {
+  // Find insert offset position based on its type
+  let insertOffset = -1;
+  if (match = localIncludeRegex.exec(includeStatement)) {
+    // Local include
+    insertOffset = prioritizedIncludePosition(localIncludesEnd, globalIncludesEnd, systemIncludesEnd);
+  } else if (match = globalIncludeRegex.exec(includeStatement)) {
+    if (systemIncludes.indexOf(match[1]) !== -1) {
+      // System include
+      insertOffset = prioritizedIncludePosition(systemIncludesEnd, globalIncludesBegin, localIncludesBegin);
+    } else {
+      // 3rd party include
+      insertOffset = prioritizedIncludePosition(globalIncludesEnd, systemIncludesEnd, localIncludesBegin);
+    }
+  } else {
+    throw new Error("Invalid include statement.");
+  }
+
+  if (insertOffset < 0) {
     // No reference include statement is found
     // 1. Search for #pragma once
     // 2. Search for include guards
@@ -297,68 +314,33 @@ export function addInclude(
 
     if (match = pragmaOnceRegex.exec(code)) {
       // Found pragma once
-      systemInsertOffset = match.index + match[0].length;
-      globalInsertOffset = match.index + match[0].length;
-      localInsertOffset = match.index + match[0].length;
-
+      insertOffset = match.index + match[0].length;
       // Add an empty line between the pragma and the include statement
       includeStatement = '\n' + includeStatement;
     } else if (match = includeGuardsRegex.exec(code)) {
       // Found include guards
-      systemInsertOffset = match.index + match[0].length;
-      globalInsertOffset = match.index + match[0].length;
-      localInsertOffset = match.index + match[0].length;
-
+      insertOffset = match.index + match[0].length;
       // Add an empty line between the copyright notice and the include statement
       includeStatement = '\n' + includeStatement;
     } else if (match = singleLineCommentsRegex.exec(code)) {
       // Found include guards
-      systemInsertOffset = match.index + match[0].length;
-      globalInsertOffset = match.index + match[0].length;
-      localInsertOffset = match.index + match[0].length;
-
+      insertOffset = match.index + match[0].length;
       // Add an empty line between the copyright notice and the include statement
       includeStatement = '\n' + includeStatement;
     } else if (match = blockCommentRegex.exec(code)) {
       // Found block copyright notice
-      systemInsertOffset = match.index + match[0].length;
-      globalInsertOffset = match.index + match[0].length;
-      localInsertOffset = match.index + match[0].length;
-
+      insertOffset = match.index + match[0].length;
       // Add an empty line between the copyright notice and the include statement
       includeStatement = '\n' + includeStatement;
     } else {
-      systemInsertOffset = 0;
-      globalInsertOffset = 0;
-      localInsertOffset = 0;
+      insertOffset = 0;
     }
   }
 
-
-  // Check type of include
-  if (match = localIncludeRegex.exec(includeStatement)) {
-    // Local include
-    return {
-      offset: localInsertOffset,
-      includeStatement
-    };
-  } else if (match = globalIncludeRegex.exec(includeStatement)) {
-    if (systemIncludes.indexOf(match[1]) !== -1) {
-      // System include
-      return {
-        offset: systemInsertOffset,
-        includeStatement
-      };
-    } else {
-      // 3rd party include
-      return {
-        offset: globalInsertOffset,
-        includeStatement
-      };
-    }
-  } else {
-    throw new Error("Invalid include statement.");
-  }
+  return {
+    offset: insertOffset,
+    includeStatement
+  };
 }
 
 export function addIncludeCommand() {
