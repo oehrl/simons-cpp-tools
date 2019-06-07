@@ -18,61 +18,6 @@ const anyIncludeStatement = "#include <some_header_file>";
 const anySystemInclude = "#include <iostream>";
 const anyLocalInclude = "#include \"some_local_header.hpp\"";
 
-const anyOtherHeaderFile =
-  `
-#ifndef ANY_OTHER_HEADER_FILE
-#define ANY_OTHER_HEADER_FILE
-
-#include <cstdint>
-#include <iostream>
-
-#include <some_library.hpp>
-#include <some_other_library.hpp>
-
-#include "local_include.hpp"
-
-namespace include {
-  class cstdint {
-
-  };
-}
-
-#endif
-`;
-
-const anyHeaderFileWithCopyrightStatementAndNoIncludes =
-  `
-// Some arbitrary copyright statement
-// that can span multiple lines
-
-#ifndef HEADER_FILE_WITH_COPYRIGHT_STATEMENT_AND_NO_INCLUDES
-#define HEADER_FILE_WITH_COPYRIGHT_STATEMENT_AND_NO_INCLUDES
-
-namespace include {
-  class cstdint {
-
-  };
-}
-
-#endif
-`;
-
-
-const otherHeaderFileWithCopyrightStatementAndNoIncludes =
-  `
-/* Some arbitrary copyright statement
- * that can span multiple lines
- */
-
-#pragma once
-
-namespace include {
-class cstdint {
-  // ...
-};
-}
-`;
-
 // Defines a Mocha test suite to group tests of similar kind together
 suite("Easy Include", function () {
 
@@ -82,6 +27,7 @@ suite("Easy Include", function () {
     assert.equal(insertion.includeStatement, anyIncludeStatement + "\n");
     assert.equal(insertion.offset, 0);
   });
+  // A normal header file
   {
     const anyHeaderFile =
       `
@@ -103,7 +49,7 @@ class cstdint {
 `;
     test("Insert system include", function () {
       const result = include(anyHeaderFile, anySystemInclude);
-      assert.equal(result,`
+      assert.equal(result, `
 #pragma once
 
 #include <cstdint>
@@ -124,7 +70,7 @@ class cstdint {
     });
     test("Insert 3rd party include", function () {
       const result = include(anyHeaderFile, anyIncludeStatement);
-      assert.equal(result,`
+      assert.equal(result, `
 #pragma once
 
 #include <cstdint>
@@ -145,7 +91,7 @@ class cstdint {
     });
     test("Insert local include", function () {
       const result = include(anyHeaderFile, anyLocalInclude);
-      assert.equal(result,`
+      assert.equal(result, `
 #pragma once
 
 #include <cstdint>
@@ -157,6 +103,128 @@ class cstdint {
 #include "local_include.hpp"
 ${anyLocalInclude}
 
+namespace include {
+class cstdint {
+
+};
+}
+`);
+    });
+  }
+  // An empty header file with a pragma once
+  {
+    const anyHeaderFile =
+      `
+#pragma once
+
+namespace include {
+class cstdint {
+
+};
+}
+`;
+    test("Insert an include into an empty header file (with pragma once)", function () {
+      const result = include(anyHeaderFile, anyIncludeStatement);
+      assert.equal(result, `
+#pragma once
+
+${anyIncludeStatement}
+
+namespace include {
+class cstdint {
+
+};
+}
+`);
+    });
+  }
+  // An empty header file with include guards
+  {
+    const anyHeaderFile =
+      `
+#ifndef ANY_HEADER_FILE  // Some comment
+#define ANY_HEADER_FILE  // Another comment
+
+namespace include {
+class cstdint {
+
+};
+}
+`;
+    test("Insert an include into an empty header file (with include guards)", function () {
+      const result = include(anyHeaderFile, anyIncludeStatement);
+      assert.equal(result, `
+#ifndef ANY_HEADER_FILE  // Some comment
+#define ANY_HEADER_FILE  // Another comment
+
+${anyIncludeStatement}
+
+namespace include {
+class cstdint {
+
+};
+}
+`);
+    });
+  }
+  // An empty header file with a copyright notice
+  {
+    const anyHeaderFile = `
+// Some copyright notice
+// That spans mutliple rows
+// and is in general super awsome
+
+// A totally unrelated comment about the namespace
+namespace include {
+class cstdint {
+
+};
+}
+`;
+    test("Insert an include into an empty header file (with copyright notice)", function () {
+      const result = include(anyHeaderFile, anyIncludeStatement);
+      assert.equal(result, `
+// Some copyright notice
+// That spans mutliple rows
+// and is in general super awsome
+
+${anyIncludeStatement}
+
+// A totally unrelated comment about the namespace
+namespace include {
+class cstdint {
+
+};
+}
+`);
+    });
+  }
+  // An empty header file with another copyright notice
+  {
+    const anyHeaderFile = `
+/* Another super awsome
+ * copyright notice, but this
+ * time it is a block comment!
+ */
+
+/* A totally unrelated comment about the namespace */
+namespace include {
+class cstdint {
+
+};
+}
+`;
+    test("Insert an include into an empty header file (with another copyright notice)", function () {
+      const result = include(anyHeaderFile, anyIncludeStatement);
+      assert.equal(result, `
+/* Another super awsome
+ * copyright notice, but this
+ * time it is a block comment!
+ */
+
+${anyIncludeStatement}
+
+/* A totally unrelated comment about the namespace */
 namespace include {
 class cstdint {
 

@@ -282,6 +282,55 @@ export function addInclude(
     }
   }
 
+  if (systemInsertOffset < 0) {
+    // No reference include statement is found
+    // 1. Search for #pragma once
+    // 2. Search for include guards
+    // 3. Search for comment at the top of the file
+    const pragmaOnceRegex = /[ \t]*#[ \t]*pragma[ \t]*once[^\n]*\n/g;
+    const includeGuardsRegex = /[ \t]*#[ \t]*ifndef[ \t]*[^\n]*\n[ \t]*#[ \t]*define[ \t]*[^\n]*\n/g;
+    const singleLineCommentsRegex = /^\s*(\/\/[^\n]*\n)+/g;
+    const blockCommentRegex = /^\s*\/[*](\n|.)*?[*]\/.*\n/g;
+
+    if (match = pragmaOnceRegex.exec(code)) {
+      // Found pragma once
+      systemInsertOffset = match.index + match[0].length;
+      globalInsertOffset = match.index + match[0].length;
+      localInsertOffset = match.index + match[0].length;
+
+      // Add an empty line between the pragma and the include statement
+      includeStatement = '\n' + includeStatement;
+    } else if (match = includeGuardsRegex.exec(code)) {
+      // Found include guards
+      systemInsertOffset = match.index + match[0].length;
+      globalInsertOffset = match.index + match[0].length;
+      localInsertOffset = match.index + match[0].length;
+
+      // Add an empty line between the copyright notice and the include statement
+      includeStatement = '\n' + includeStatement;
+    } else if (match = singleLineCommentsRegex.exec(code)) {
+      // Found include guards
+      systemInsertOffset = match.index + match[0].length;
+      globalInsertOffset = match.index + match[0].length;
+      localInsertOffset = match.index + match[0].length;
+
+      // Add an empty line between the copyright notice and the include statement
+      includeStatement = '\n' + includeStatement;
+    } else if (match = blockCommentRegex.exec(code)) {
+      // Found block copyright notice
+      systemInsertOffset = match.index + match[0].length;
+      globalInsertOffset = match.index + match[0].length;
+      localInsertOffset = match.index + match[0].length;
+
+      // Add an empty line between the copyright notice and the include statement
+      includeStatement = '\n' + includeStatement;
+    } else {
+      systemInsertOffset = 0;
+      globalInsertOffset = 0;
+      localInsertOffset = 0;
+    }
+  }
+
 
   // Check type of include
   if (match = localIncludeRegex.exec(includeStatement)) {
