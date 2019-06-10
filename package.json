@@ -1,57 +1,57 @@
 {
-  "name": "simons-cpp-tools",
-  "displayName": "Simon's C++ Tools",
-  "description": "A collection of tools to make coding C++ more efficient.",
-  "version": "0.1.0",
-  "publisher": "simonoehrl",
-  "engines": {
-    "vscode": "^1.35.0"
-  },
-  "categories": [
-    "Programming Languages"
-  ],
-  "keywords": [
-    "c",
-    "c++",
-    "include",
-    "switch",
-    "header",
-    "source"
-  ],
-  "activationEvents": [
-    "onCommand:cpptools.addInclude",
-    "onCommand:cpptools.switchHeaderSource"
-  ],
-  "main": "./out/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "cpptools.addInclude",
-        "title": "Add Include"
-      },
-      {
-        "command": "cpptools.switchHeaderSource",
-        "title": "C++ Tools: Switch Header/Source"
-      }
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "npm run compile && node ./node_modules/vscode/bin/test"
-  },
-  "devDependencies": {
-    "typescript": "^3.3.1",
-    "vscode": "^1.1.28",
-    "tslint": "^5.12.1",
-    "@types/node": "^10.12.21",
-    "@types/mocha": "^2.2.42"
-  },
+	"name": "simons-cpp-tools",
+	"displayName": "Simon's C++ Tools",
+	"description": "A collection of tools to make coding C++ more efficient.",
+	"version": "0.0.1",
+	"publisher": "simonoehrl",
+	"engines": {
+		"vscode": "^1.35.0"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"keywords": [
+		"c",
+		"c++",
+		"include",
+		"switch",
+		"header",
+		"source"
+	],
+	"activationEvents": [
+		"onCommand:cpptools.addInclude",
+		"onCommand:cpptools.switchHeaderSource"
+	],
+	"main": "./out/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "cpptools.addInclude",
+				"title": "Add Include"
+			},
+			{
+				"command": "cpptools.switchHeaderSource",
+				"title": "C++ Tools: Switch Header/Source"
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"postinstall": "node ./node_modules/vscode/bin/install",
+		"test": "npm run compile && node ./node_modules/vscode/bin/test"
+	},
+	"devDependencies": {
+		"typescript": "^3.3.1",
+		"vscode": "^1.1.28",
+		"tslint": "^5.12.1",
+		"@types/node": "^10.12.21",
+		"@types/mocha": "^2.2.42"
+	},
   "repository": {
     "type": "git",
     "url": "https://github.com/oehrl/simons-cpp-tools.git"
-  },
-  "homepage": "https://github.com/oehrl/simons-cpp-tools"
+	},
+	"homepage": "https://github.com/oehrl/simons-cpp-tools"
 }
