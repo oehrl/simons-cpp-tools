@@ -233,4 +233,53 @@ class cstdint {
 `);
     });
   }
+  // Specific example from rainbow
+  {
+    const headerFile = `
+#pragma once
+
+#include "scene.hpp"
+
+namespace rainbow {
+
+class Octree {
+ public:
+  struct OcreeNode {
+    glm::vec3
+  };
+  Octree(const Scene::Vertex* vertices, size_t vertex_count);
+
+ private:
+  const Scene::Vertex* vertices_;
+  size_t vertex_count_;
+};
+
+}  // namespace rainbow
+`;
+    test("Insert include into exsample header", function () {
+      const result = include(headerFile, '#include <glm/vec3.hpp>');
+      assert.equal(result, `
+#pragma once
+
+#include <glm/vec3.hpp>
+#include "scene.hpp"
+
+namespace rainbow {
+
+class Octree {
+ public:
+  struct OcreeNode {
+    glm::vec3
+  };
+  Octree(const Scene::Vertex* vertices, size_t vertex_count);
+
+ private:
+  const Scene::Vertex* vertices_;
+  size_t vertex_count_;
+};
+
+}  // namespace rainbow
+`);
+    });
+  }
 });

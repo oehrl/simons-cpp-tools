@@ -255,7 +255,7 @@ export function addInclude(
   }
 
   const localIncludeRegex = /[ \t]*#[ \t]*include[ \t]*\"([\w- .]+)\"[^\n]*\n/g;
-  const globalIncludeRegex = /[ \t]*#[ \t]*include[ \t]*<([\w- .]+)>[^\n]*\n/g;
+  const globalIncludeRegex = /[ \t]*#[ \t]*include[ \t]*<([\w- .\/]+)>[^\n]*\n/g;
 
   let systemIncludesBegin = -1;
   let systemIncludesEnd = -1;
