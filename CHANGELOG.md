@@ -9,12 +9,12 @@ All notable changes to the `Simon's C++ Tools` extension will be documented in t
 - `Switch Header/Source`: the command now also considers the common postfixes of the paths, so executing the command in source file `workspace/some_lib/src/a/b/c/d/test.cpp` will favor the header file `workspace/some_lib/include/a/b/c/d/test.hpp` over `workspace/some_other_lib/test.hpp`.
 
 ### Fixed
-- Headers can now contain any characters except: `<`, `>`, `"` and `'`.
+- `Add Include`: headers can now contain any characters except: `<`, `>`, `"` and `'`.
 
 ## [0.0.2] - 2019-06-10
 
 ### Fixed
-- Bug that prevented headers containing a slash to be inserted
+- `Add Include`: bug that prevented headers containing a slash to be inserted
 
 ## [0.0.1] - 2019-06-07
 
