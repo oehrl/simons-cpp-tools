@@ -8,8 +8,8 @@ function buildGlobForExtensions(filenameBase: string, extensions: string[]) {
 }
 
 export function comparePaths(path1: string, path2: string) {
-  const path1_segments = path1.split('/');
-  const path2_segments = path2.split('/');
+  const path1_segments = path1.split('/').filter((segment) => segment.length > 0);
+  const path2_segments = path2.split('/').filter((segment) => segment.length > 0);
   let commonPrefixLength = 0;
   for (let i = 0; i < Math.min(path1_segments.length, path2_segments.length); ++i) {
     if (path1_segments[i] === path2_segments[i]) {
