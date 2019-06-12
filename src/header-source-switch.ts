@@ -7,7 +7,7 @@ function buildGlobForExtensions(filenameBase: string, extensions: string[]) {
   return `**/${filenameBase}.{${extensions.join(",")}}`;
 }
 
-function comparePaths(path1: string, path2: string) {
+export function comparePaths(path1: string, path2: string) {
   const path1_segments = path1.split('/');
   const path2_segments = path2.split('/');
   let commonPrefixLength = 0;
