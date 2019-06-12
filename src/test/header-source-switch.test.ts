@@ -17,4 +17,11 @@ suite("Header/Source Switch", () => {
             comparePaths('workspace/include/libname/subdir1/subdir2', 'workspace/src/subdir1/subdir2'),
             3);
     });
+
+    test("Path with overlapping pre- and postfixes", () => {
+        assert.equal(
+            comparePaths('a/a/a', 'a/a'),
+            1
+        );
+    });
 });

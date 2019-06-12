@@ -18,8 +18,17 @@ export function comparePaths(path1: string, path2: string) {
       break;
     }
   }
-  return (path1_segments.length - commonPrefixLength) +
-    (path2_segments.length - commonPrefixLength);
+  let commonPostfixLength = 0;
+  for (let i = 0; i < Math.min(path1_segments.length, path2_segments.length) - commonPrefixLength; ++i) {
+    if (path1_segments[path1_segments.length - i - 1] === path2_segments[path2_segments.length - i - 1]) {
+      ++commonPostfixLength;
+    } else {
+      break;
+    }
+  }
+
+  return (path1_segments.length - commonPrefixLength - commonPostfixLength) +
+    (path2_segments.length - commonPrefixLength - commonPostfixLength);
 }
 
 export function switchBetweenHeaderAndSourceFile() {
