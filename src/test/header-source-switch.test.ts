@@ -1,5 +1,6 @@
 // The module 'assert' provides assertion methods from node
 import * as assert from 'assert';
+import { expect } from 'chai';
 import { comparePaths } from '../header-source-switch';
 
 // Defines a Mocha test suite to group tests of similar kind together
@@ -23,5 +24,12 @@ suite("Header/Source Switch", () => {
             comparePaths('a/a/a', 'a/a'),
             1
         );
+    });
+
+    test("Example from changelog", () => {
+        const source = 'workspace/some_lib/src/a/b/c/d/';
+        const actualHeader = 'workspace/some_lib/include/a/b/c/d/';
+        const alternativeHeader = 'workspace/some_other_lib/';
+        expect(comparePaths(source, actualHeader)).to.be.lessThan(comparePaths(source, alternativeHeader));
     });
 });
