@@ -282,4 +282,53 @@ class Octree {
 `);
     });
   }
+  // Another specific example from rainbow
+  {
+    const headerFile = `
+#pragma once
+
+#include "scene.hpp"
+
+namespace rainbow {
+
+class Octree {
+ public:
+  struct OcreeNode {
+    glm::vec3
+  };
+  Octree(const Scene::Vertex* vertices, size_t vertex_count);
+
+ private:
+  const Scene::Vertex* vertices_;
+  size_t vertex_count_;
+};
+
+}  // namespace rainbow
+`;
+    test("Insert include into exsample header", function () {
+      const result = include(headerFile, '#include "rainbow/rendering_backend.hpp"');
+      assert.equal(result, `
+#pragma once
+
+#include "scene.hpp"
+#include "rainbow/rendering_backend.hpp"
+
+namespace rainbow {
+
+class Octree {
+ public:
+  struct OcreeNode {
+    glm::vec3
+  };
+  Octree(const Scene::Vertex* vertices, size_t vertex_count);
+
+ private:
+  const Scene::Vertex* vertices_;
+  size_t vertex_count_;
+};
+
+}  // namespace rainbow
+`);
+    });
+  }
 });
