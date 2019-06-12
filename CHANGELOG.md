@@ -2,6 +2,15 @@
 
 All notable changes to the `Simon's C++ Tools` extension will be documented in this file.
 
+## [0.0.3] - 2019-06-12
+
+### Changed
+- `Switch Header/Source`: the command now also works for Objective C/C++ source files (files having the extensions `.m` or `.mm`).
+- `Switch Header/Source`: the command now also considers the common postfixes of the paths, so executing the command in source file `workspace/some_lib/src/a/b/c/d/test.cpp` will favor the header file `workspace/some_lib/include/a/b/c/d/test.hpp` over `workspace/some_other_lib/test.hpp`.
+
+### Fixed
+- Headers can now contain any characters except: `<`, `>`, `"` and `'`.
+
 ## [0.0.2] - 2019-06-10
 
 ### Fixed
