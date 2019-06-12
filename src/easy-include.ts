@@ -254,8 +254,8 @@ export function addInclude(
     };
   }
 
-  const localIncludeRegex = /[ \t]*#[ \t]*include[ \t]*\"([\w- .]+)\"[^\n]*\n/g;
-  const globalIncludeRegex = /[ \t]*#[ \t]*include[ \t]*<([\w- .\/]+)>[^\n]*\n/g;
+  const localIncludeRegex = /[ \t]*#[ \t]*include[ \t]*\"([^<>"']+)\"[^\n]*\n/g;
+  const globalIncludeRegex = /[ \t]*#[ \t]*include[ \t]*<([^<>"']+)>[^\n]*\n/g;
 
   let systemIncludesBegin = -1;
   let systemIncludesEnd = -1;
@@ -354,16 +354,24 @@ export function addIncludeCommand() {
     valueSelection: [9, 26]
   }).then((value) => {
     if (value) {
-      const insertion = addInclude(textEditor.document.getText(), value);
-      const position = textEditor.document.positionAt(insertion.offset);
-      // console.log(`Inserting ${insertion.includeStatement.replace('\n', '\\n')} at ${position.line}:${position.character}`);
+      try {
+        const insertion = addInclude(textEditor.document.getText(), value);
+        const position = textEditor.document.positionAt(insertion.offset);
+        // console.log(`Inserting ${insertion.includeStatement.replace('\n', '\\n')} at ${position.line}:${position.character}`);
 
-      textEditor.edit((edit) => {
-        edit.insert(
-          position,
-          insertion.includeStatement
-        );
-      });
+        textEditor.edit((edit) => {
+          edit.insert(
+            position,
+            insertion.includeStatement
+          );
+        });
+      } catch (error) {
+        if (error instanceof Error) {
+          vscode.window.showErrorMessage(error.message);
+        } else {
+          vscode.window.showErrorMessage('Unknown exception occured');
+        }
+      }
     }
   });
 }
