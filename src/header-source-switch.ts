@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 const headerExtensions = ['hpp', 'h', 'hh'];
-const sourceExtensions = ['cpp', 'c', 'cc'];
+const sourceExtensions = ['cpp', 'c', 'cc', 'm', 'mm'];
 
 function buildGlobForExtensions(filenameBase: string, extensions: string[]) {
   return `**/${filenameBase}.{${extensions.join(",")}}`;
@@ -47,7 +47,7 @@ export function switchBetweenHeaderAndSourceFile() {
 
   vscode.workspace.findFiles(glob).then((uris) => {
     let bestCandidate;
-    let minimalDifference: number|undefined;
+    let minimalDifference: number | undefined;
 
     for (const uri of uris) {
       if (uri.scheme === "file") {
