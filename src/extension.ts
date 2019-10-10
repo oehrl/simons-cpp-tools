@@ -3,6 +3,7 @@
 import * as vscode from 'vscode';
 import { addIncludeCommand } from './easy-include';
 import { switchBetweenHeaderAndSourceFile } from './header-source-switch';
+import { CMakeTaskProvider } from './cmake-task-provider';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -14,6 +15,10 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand(
 			"cpptools.switchHeaderSource", switchBetweenHeaderAndSourceFile));
+
+	context.subscriptions.push(
+		vscode.tasks.registerTaskProvider(
+			"cmaketask", new CMakeTaskProvider()));
 }
 
 // this method is called when your extension is deactivated

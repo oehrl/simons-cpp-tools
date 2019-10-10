@@ -20,7 +20,8 @@
   ],
   "activationEvents": [
     "onCommand:cpptools.addInclude",
-    "onCommand:cpptools.switchHeaderSource"
+    "onCommand:cpptools.switchHeaderSource",
+    "workspaceContains:**/CMakeLists.txt"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -32,6 +33,32 @@
       {
         "command": "cpptools.switchHeaderSource",
         "title": "C++ Tools: Switch Header/Source"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "cmakebuildtask",
+        "required": [
+          "task"
+        ]
+      },
+      {
+        "type": "cmakecleantask",
+        "required": [
+          "task"
+        ]
+      },
+      {
+        "type": "cmakerebuildtask",
+        "required": [
+          "task"
+        ]
+      },
+      {
+        "type": "cmaketesttask",
+        "required": [
+          "task"
+        ]
       }
     ]
   },
