@@ -1,5 +1,9 @@
 import { TextEditor, TextEditorEdit } from "vscode";
 import * as vscode from 'vscode';
+import { open, readFile, exists, readFileSync, existsSync, fstat, readdir } from "fs";
+import * as path from 'path';
+import * as glob from "glob";
+import { buildGlobForExtensions, headerExtensions } from "./source-info";
 
 export interface IncludeInsertion {
   offset: number;
@@ -343,37 +347,200 @@ export function addInclude(
   };
 }
 
+interface CompileCommand {
+  directory: string;
+  command: string;
+  file: string;
+}
+
+interface CppProperties {
+  configurations?: [{
+    name?: string,
+    intelliSenseMode?: string,
+    includePath?: [string],
+    macFrameworkPath?: [string],
+    defines?: [string],
+    forcedInclude?: [string],
+    compilerPath?: string,
+    cStandard?: string,
+    cppStandard?: string,
+    compileCommands?: string,
+    browse?: {
+      path?: [string],
+      limitSymbolsToIncludedHeaders?: boolean,
+      databaseFilename?: string
+    }
+  }];
+}
+
 export class EasyInclude {
+  private _headerFilesInFolder: { [x: string]: string[] } = {};
+  private _compileCommands: { [x: string]: [CompileCommand] } = {};
+
+  private _quickPick = vscode.window.createQuickPick();
+  private _currentItems: vscode.QuickPickItem[] = [];
+  private _currentFileName: string = "";
+
+  constructor() {
+    this.parseAllCppProperties();
+    this._quickPick.onDidAccept(this.accept, this);
+    this._quickPick.matchOnDescription = false;
+    this._quickPick.matchOnDetail = false;
+  }
+
+  private parseAllCppProperties() {
+    if (vscode.workspace.workspaceFolders) {
+      for (let folder of vscode.workspace.workspaceFolders) {
+        this.parseCppPropertiesFile(folder.uri.fsPath);
+      }
+    }
+  }
+
+  private parseCppPropertiesFile(workspaceFolderPath: string) {
+    const cppPropertiesPath = path.join(workspaceFolderPath, ".vscode", "c_cpp_properties.json");
+
+    console.debug(`Reading ${cppPropertiesPath}`);
+    readFile(cppPropertiesPath, (error, cppPropertiesData) => {
+      if (error) {
+        console.debug(`Cannot read ${cppPropertiesPath}`);
+      } else {
+        const cppProperties = JSON.parse(cppPropertiesData as unknown as string) as CppProperties | undefined;
+        if (!cppProperties || !cppProperties.configurations) {
+          vscode.window.showWarningMessage(`No configuration found in ${cppPropertiesPath}!`);
+        } else {
+          console.debug(`Interating ${cppPropertiesPath}`);
+          for (const config of cppProperties.configurations) {
+            if (!config.compileCommands) {
+              vscode.window.showWarningMessage(`No compileCommands for configuration ${config.name} in ${cppPropertiesPath}.`)
+            } else {
+              const compileCommandsFilename = config.compileCommands.replace("${workspaceFolder}", workspaceFolderPath);
+              this.extractCompileCommands(compileCommandsFilename);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  private extractCompileCommands(compileCommandsFilename: string) {
+    console.debug(`Reading ${compileCommandsFilename}`);
+
+    readFile(compileCommandsFilename, (error, compileCommandsData) => {
+      console.debug(`Parsing ${compileCommandsFilename}`);
+      const compileCommands = JSON.parse(compileCommandsData as unknown as string) as [CompileCommand];
+      if (!compileCommands) {
+        vscode.window.showErrorMessage(`Invalid compile commands ${compileCommandsFilename}!`);
+      } else {
+        for (const command of compileCommands) {
+          const fileCommands = this._compileCommands[command.file];
+          if (fileCommands) {
+            fileCommands.push(command);
+          } else {
+            this._compileCommands[command.file] = [command];
+          }
+          if (this._currentFileName === command.file) {
+            this.addIncludeForCompileCommand(command);
+          }
+        }
+      }
+    });
+  }
+
+  private getHeaderFilesInFolder(folderPath: string, callback: (files: string[]) => void) {
+    folderPath = path.normalize(folderPath);
+    const headerFilesInFolder = this._headerFilesInFolder[folderPath];
+    if (headerFilesInFolder) {
+      callback(headerFilesInFolder);
+    } else {
+      glob(path.join(folderPath, buildGlobForExtensions(headerExtensions)), (error, matches) => {
+        this._headerFilesInFolder[folderPath] = matches;
+        callback(matches);
+      });
+    }
+  }
+
+  private addIncludeForCompileCommand(command: CompileCommand) {
+    const originalFileName = this._currentFileName;
+    const includePathRegex = /-I([^ ]+)/g;
+    let match: RegExpExecArray | null;
+    while (match = includePathRegex.exec(command.command)) {
+      const includePath = match[1];
+      this.getHeaderFilesInFolder(includePath, (files) => {
+        if (this._currentFileName === originalFileName) {
+          for (const file of files) {
+            if (!file.startsWith(includePath)) {
+              debugger;
+            } else {
+              this._currentItems.push({
+                label: `#include <${file.substr(includePath.length + 1)}>`,
+                description: file
+              });
+            }
+          }
+          this._quickPick.items = this._currentItems;
+        }
+      });
+    }
+  }
+
+  private addIncludesToQuickPick() {
+    for (const include of systemIncludes) {
+      this._currentItems.push({
+        label: `#include <${include}>`
+      });
+    }
+    this._quickPick.items = this._currentItems;
+
+    const compileCommands = this._compileCommands[this._currentFileName] || [];
+    for (const command of compileCommands) {
+      this.addIncludeForCompileCommand(command);
+    }
+  }
+
+  private accept() {
+    const textEditor = vscode.window.activeTextEditor;
+    if (!textEditor) {
+      return;
+    }
+
+    const selectedItems = this._quickPick.selectedItems;
+    if (selectedItems.length !== 1) {
+      debugger;
+    }
+    const value = selectedItems[0].label;
+    if (value) {
+      try {
+        const insertion = addInclude(textEditor.document.getText(), value);
+        const position = textEditor.document.positionAt(insertion.offset);
+        // console.log(`Inserting ${insertion.includeStatement.replace('\n', '\\n')} at ${position.line}:${position.character}`);
+
+        textEditor.edit((edit) => {
+          edit.insert(
+            position,
+            insertion.includeStatement
+          );
+        });
+        this._quickPick.hide();
+      } catch (error) {
+        if (error instanceof Error) {
+          vscode.window.showErrorMessage(error.message);
+        } else {
+          vscode.window.showErrorMessage('Unknown exception occured');
+        }
+      }
+    }
+  }
+
   addIncludeCommand() {
     const textEditor = vscode.window.activeTextEditor;
     if (!textEditor) {
       return;
     }
 
-    vscode.window.showInputBox({
-      value: "#include <some_header.hpp>",
-      valueSelection: [9, 26]
-    }).then((value) => {
-      if (value) {
-        try {
-          const insertion = addInclude(textEditor.document.getText(), value);
-          const position = textEditor.document.positionAt(insertion.offset);
-          // console.log(`Inserting ${insertion.includeStatement.replace('\n', '\\n')} at ${position.line}:${position.character}`);
-
-          textEditor.edit((edit) => {
-            edit.insert(
-              position,
-              insertion.includeStatement
-            );
-          });
-        } catch (error) {
-          if (error instanceof Error) {
-            vscode.window.showErrorMessage(error.message);
-          } else {
-            vscode.window.showErrorMessage('Unknown exception occured');
-          }
-        }
-      }
-    });
+    this._currentFileName = textEditor.document.fileName;
+    this._currentItems = [];
+    this._quickPick.value = "";
+    this.addIncludesToQuickPick();
+    this._quickPick.show();
   }
 }
