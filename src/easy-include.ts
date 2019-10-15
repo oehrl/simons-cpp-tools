@@ -464,7 +464,7 @@ export class EasyInclude {
     const includePathRegex = /-I([^ ]+)/g;
     let match: RegExpExecArray | null;
     while (match = includePathRegex.exec(command.command)) {
-      const includePath = match[1];
+      const includePath = path.normalize(match[1]);
       this.getHeaderFilesInFolder(includePath, (files) => {
         if (this._currentFileName === originalFileName) {
           for (const file of files) {
