@@ -1,11 +1,5 @@
 import * as vscode from 'vscode';
-
-const headerExtensions = ['hpp', 'h', 'hh'];
-const sourceExtensions = ['cpp', 'c', 'cc', 'm', 'mm'];
-
-function buildGlobForExtensions(filenameBase: string, extensions: string[]) {
-  return `**/${filenameBase}.{${extensions.join(",")}}`;
-}
+import { headerExtensions, sourceExtensions, buildGlobForExtensions } from './source-info';
 
 export function comparePaths(path1: string, path2: string) {
   const path1_segments = path1.split('/').filter((segment) => segment.length > 0);
@@ -47,9 +41,9 @@ export function switchBetweenHeaderAndSourceFile() {
 
   let glob;
   if (headerExtensions.indexOf(extension) !== -1) {
-    glob = buildGlobForExtensions(fileNameBase, sourceExtensions);
+    glob = buildGlobForExtensions(sourceExtensions, fileNameBase);
   } else if (sourceExtensions.indexOf(extension) !== -1) {
-    glob = buildGlobForExtensions(fileNameBase, headerExtensions);
+    glob = buildGlobForExtensions(headerExtensions, fileNameBase);
   } else {
     return;
   }
