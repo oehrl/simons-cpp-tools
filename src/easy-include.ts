@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { open, readFile, exists, readFileSync, existsSync, fstat, readdir } from "fs";
 import * as path from 'path';
 import * as glob from "glob";
+import * as os from "os";
 import { buildGlobForExtensions, headerExtensions, isHeaderFile } from "./source-info";
 import { getCorrespondingSourceFile } from "./header-source-switch";
 
@@ -354,24 +355,26 @@ interface CompileCommand {
   file: string;
 }
 
+interface CppPropertiesConfiguration {
+  name?: string;
+  intelliSenseMode?: string;
+  includePath?: [string];
+  macFrameworkPath?: [string];
+  defines?: [string];
+  forcedInclude?: [string];
+  compilerPath?: string;
+  cStandard?: string;
+  cppStandard?: string;
+  compileCommands?: string;
+  browse?: {
+    path?: [string];
+    limitSymbolsToIncludedHeaders?: boolean;
+    databaseFilename?: string;
+  };
+}
+
 interface CppProperties {
-  configurations?: [{
-    name?: string,
-    intelliSenseMode?: string,
-    includePath?: [string],
-    macFrameworkPath?: [string],
-    defines?: [string],
-    forcedInclude?: [string],
-    compilerPath?: string,
-    cStandard?: string,
-    cppStandard?: string,
-    compileCommands?: string,
-    browse?: {
-      path?: [string],
-      limitSymbolsToIncludedHeaders?: boolean,
-      databaseFilename?: string
-    }
-  }];
+  configurations?: CppPropertiesConfiguration[];
 }
 
 export class EasyInclude {
@@ -411,16 +414,28 @@ export class EasyInclude {
         } else {
           console.debug(`Interating ${cppPropertiesPath}`);
           for (const config of cppProperties.configurations) {
-            if (!config.compileCommands) {
-              vscode.window.showWarningMessage(`No compileCommands for configuration ${config.name} in ${cppPropertiesPath}.`)
-            } else {
-              const compileCommandsFilename = config.compileCommands.replace("${workspaceFolder}", workspaceFolderPath);
-              this.extractCompileCommands(compileCommandsFilename);
-            }
+            this.parseCppPropertiesConfiguration(config, cppPropertiesPath, workspaceFolderPath);
           }
         }
       }
     });
+  }
+
+  private parseCppPropertiesConfiguration(config: CppPropertiesConfiguration, cppPropertiesPath: string, workspaceFolderPath: string) {
+    if (config.name && (
+      (config.name === "Linux" && os.platform() !== "linux") ||
+      (config.name === "Mac" && os.platform() !== "darwin") ||
+      (config.name === "Win32" && os.platform() !== "win32"))) {
+      console.debug(`Configuration was not used because of platform mismatch: ${config.name}`);
+      return;
+    }
+
+    if (!config.compileCommands) {
+      vscode.window.showWarningMessage(`No compileCommands for configuration ${config.name} in ${cppPropertiesPath}.`);
+    } else {
+      const compileCommandsFilename = config.compileCommands.replace("${workspaceFolder}", workspaceFolderPath);
+      this.extractCompileCommands(compileCommandsFilename);
+    }
   }
 
   private extractCompileCommands(compileCommandsFilename: string) {
