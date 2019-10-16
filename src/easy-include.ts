@@ -457,16 +457,22 @@ export class EasyInclude {
             if (commandMatch) {
               this._defaultIncludeFolders = [];
               child_process.exec(`${commandMatch[0]} -E -x c++ - -v < /dev/null`, (error, stdout, stderr) => {
-                // vscode.window.showInformationMessage(stdout);
-                const includePathsRegex = /#include <...> search starts here:\n((\ .+\n)+)/;
-                const stderrMatch = includePathsRegex.exec(stderr);
-                if (stderrMatch) {
-                  const includePathRegex = / (.+)\n/g;
-                  let match: RegExpExecArray | null;
-                  while (match = includePathRegex.exec(stderrMatch[1])) {
-                    if (this._defaultIncludeFolders) {
-                      this._defaultIncludeFolders.push(path.normalize(match[1]));
+                if (error) {
+                  this._defaultIncludeFolders = undefined;
+                } else {
+                  const includePathsRegex = /#include <...> search starts here:\n((\ .+\n)+)/;
+                  const stderrMatch = includePathsRegex.exec(stderr);
+                  if (stderrMatch) {
+                    const includePathRegex = / (.+)\n/g;
+                    let match: RegExpExecArray | null;
+                    while (match = includePathRegex.exec(stderrMatch[1])) {
+                      if (this._defaultIncludeFolders) {
+                        this._defaultIncludeFolders.push(path.normalize(match[1]));
+                      }
                     }
+                  }
+                  if (this._currentFileName !== "") {
+                    this.addGeneralIncludesToQuickPick();
                   }
                 }
               });
@@ -585,6 +591,7 @@ export class EasyInclude {
           );
         });
         this._quickPick.hide();
+        this._currentFileName = "";
       } catch (error) {
         if (error instanceof Error) {
           vscode.window.showErrorMessage(error.message);
