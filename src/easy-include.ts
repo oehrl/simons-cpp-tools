@@ -4,6 +4,7 @@ import { open, readFile, exists, readFileSync, existsSync, fstat, readdir } from
 import * as path from 'path';
 import * as glob from "glob";
 import * as os from "os";
+import * as child_process from "child_process";
 import { buildGlobForExtensions, headerExtensions, isHeaderFile } from "./source-info";
 import { getCorrespondingSourceFile } from "./header-source-switch";
 
@@ -384,6 +385,7 @@ export class EasyInclude {
   private _quickPick = vscode.window.createQuickPick();
   private _currentItems: vscode.QuickPickItem[] = [];
   private _currentFileName: string = "";
+  private _defaultIncludeFolders: string[] | undefined = undefined;
 
   constructor() {
     this.parseAllCppProperties();
@@ -448,6 +450,29 @@ export class EasyInclude {
         vscode.window.showErrorMessage(`Invalid compile commands ${compileCommandsFilename}!`);
       } else {
         for (const command of compileCommands) {
+          if (typeof this._defaultIncludeFolders === "undefined") {
+            const commandRegex = /^[^ ]+/g;
+            const commandMatch = commandRegex.exec(command.command);
+
+            if (commandMatch) {
+              this._defaultIncludeFolders = [];
+              child_process.exec(`${commandMatch[0]} -E -x c++ - -v < /dev/null`, (error, stdout, stderr) => {
+                // vscode.window.showInformationMessage(stdout);
+                const includePathsRegex = /#include <...> search starts here:\n((\ .+\n)+)/;
+                const stderrMatch = includePathsRegex.exec(stderr);
+                if (stderrMatch) {
+                  const includePathRegex = / (.+)\n/g;
+                  let match: RegExpExecArray | null;
+                  while (match = includePathRegex.exec(stderrMatch[1])) {
+                    if (this._defaultIncludeFolders) {
+                      this._defaultIncludeFolders.push(path.normalize(match[1]));
+                    }
+                  }
+                }
+              });
+            }
+          }
+
           const fileCommands = this._compileCommands[command.file];
           if (fileCommands) {
             fileCommands.push(command);
@@ -462,51 +487,52 @@ export class EasyInclude {
     });
   }
 
-  private getHeaderFilesInFolder(folderPath: string, callback: (files: string[]) => void) {
-    folderPath = path.normalize(folderPath);
-    const headerFilesInFolder = this._headerFilesInFolder[folderPath];
-    if (headerFilesInFolder) {
-      callback(headerFilesInFolder);
-    } else {
-      glob(path.join(folderPath, buildGlobForExtensions(headerExtensions)), (error, matches) => {
-        this._headerFilesInFolder[folderPath] = matches;
-        callback(matches);
-      });
-    }
+  private async getHeaderFilesInFolder(folderPath: string): Promise<string[]> {
+    const promise = new Promise<string[]>((resolve, reject) => {
+      folderPath = path.normalize(folderPath);
+      const headerFilesInFolder = this._headerFilesInFolder[folderPath];
+
+      if (headerFilesInFolder) {
+        resolve(headerFilesInFolder);
+      } else {
+        glob(path.join(folderPath, buildGlobForExtensions(headerExtensions)), (error, matches) => {
+          if (error) {
+            reject(error);
+          } else {
+            this._headerFilesInFolder[folderPath] = matches;
+            resolve(matches);
+          }
+        });
+      }
+    });
+
+    return promise;
   }
 
-  private addIncludeForCompileCommand(command: CompileCommand) {
+  private async addIncludeForCompileCommand(command: CompileCommand) {
     const originalFileName = this._currentFileName;
     const includePathRegex = /-I([^ ]+)/g;
     let match: RegExpExecArray | null;
     while (match = includePathRegex.exec(command.command)) {
       const includePath = path.normalize(match[1]);
-      this.getHeaderFilesInFolder(includePath, (files) => {
-        if (this._currentFileName === originalFileName) {
-          for (const file of files) {
-            if (!file.startsWith(includePath)) {
-              debugger;
-            } else {
-              this._currentItems.push({
-                label: `#include <${file.substr(includePath.length + 1)}>`,
-                description: file
-              });
-            }
+      const files = await this.getHeaderFilesInFolder(includePath);
+      if (this._currentFileName === originalFileName) {
+        for (const file of files) {
+          if (!file.startsWith(includePath)) {
+            debugger;
+          } else {
+            this._currentItems.push({
+              label: `#include <${file.substr(includePath.length + 1)}>`,
+              description: file
+            });
           }
-          this._quickPick.items = this._currentItems;
         }
-      });
+        this._quickPick.items = this._currentItems;
+      }
     }
   }
 
   private async addFileSpecificIncludesToQuickPick() {
-    for (const include of systemIncludes) {
-      this._currentItems.push({
-        label: `#include <${include}>`
-      });
-    }
-    this._quickPick.items = this._currentItems;
-
     let fileName = this._currentFileName;
     if (isHeaderFile(fileName)) {
       const uri = await getCorrespondingSourceFile(fileName);
@@ -517,6 +543,21 @@ export class EasyInclude {
     const compileCommands = this._compileCommands[fileName] || [];
     for (const command of compileCommands) {
       this.addIncludeForCompileCommand(command);
+    }
+  }
+
+  private async addGeneralIncludesToQuickPick() {
+    if (this._defaultIncludeFolders) {
+      for (const folder of this._defaultIncludeFolders) {
+        const files = await this.getHeaderFilesInFolder(folder);
+        for (const file of files) {
+          this._currentItems.push({
+            label: `#include <${file.substr(folder.length + 1)}>`,
+            description: file
+          });
+        }
+        this._quickPick.items = this._currentItems;
+      }
     }
   }
 
@@ -563,6 +604,7 @@ export class EasyInclude {
     this._currentFileName = textEditor.document.fileName;
     this._currentItems = [];
     this._quickPick.value = "";
+    this.addGeneralIncludesToQuickPick();
     this.addFileSpecificIncludesToQuickPick();
     this._quickPick.show();
   }
