@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { headerExtensions, sourceExtensions, buildGlobForExtensions } from './source-info';
+import * as path from "path";
 
 export function comparePaths(path1: string, path2: string) {
   const path1_segments = path1.split('/').filter((segment) => segment.length > 0);
@@ -25,6 +26,35 @@ export function comparePaths(path1: string, path2: string) {
     (path2_segments.length - commonPrefixLength - commonPostfixLength);
 }
 
+async function findBestCandidate(glob: string, originalLocation: string): Promise<vscode.Uri | undefined> {
+  const uris = await vscode.workspace.findFiles(glob);
+  let bestCandidate;
+  let minimalDifference: number | undefined;
+
+  for (const uri of uris) {
+    if (uri.scheme === "file") {
+      const indexOfLastSlash = uri.path.lastIndexOf('/');
+      const candidateDirectory = uri.path.substring(0, indexOfLastSlash);
+      const difference = comparePaths(candidateDirectory, originalLocation);
+
+      if (typeof minimalDifference === 'undefined' ||
+        difference < minimalDifference) {
+        minimalDifference = difference;
+        bestCandidate = uri;
+      }
+    }
+  }
+
+  return bestCandidate;
+}
+
+export async function getCorrespondingSourceFile(headerFileName: string): Promise<vscode.Uri | undefined> {
+  const fileNameBase = path.basename(headerFileName, path.extname(headerFileName));
+  const glob = buildGlobForExtensions(sourceExtensions, fileNameBase);
+  const bestCandidate = await findBestCandidate(glob, path.dirname(fileNameBase));
+  return bestCandidate;
+}
+
 export function switchBetweenHeaderAndSourceFile() {
   const textEditor = vscode.window.activeTextEditor;
   if (!textEditor) {
@@ -48,24 +78,9 @@ export function switchBetweenHeaderAndSourceFile() {
     return;
   }
 
-  vscode.workspace.findFiles(glob).then((uris) => {
-    let bestCandidate;
-    let minimalDifference: number | undefined;
-
-    for (const uri of uris) {
-      if (uri.scheme === "file") {
-        const indexOfLastSlash = uri.path.lastIndexOf('/');
-        const candidateDirectory = uri.path.substring(0, indexOfLastSlash);
-        const difference = comparePaths(candidateDirectory, directory);
-
-        if (typeof minimalDifference === 'undefined' ||
-          difference < minimalDifference) {
-          minimalDifference = difference;
-          bestCandidate = uri;
-        }
-      }
+  findBestCandidate(glob, directory).then((bestCandidate) => {
+    if (bestCandidate) {
+      vscode.commands.executeCommand("vscode.open", bestCandidate);
     }
-
-    vscode.commands.executeCommand("vscode.open", bestCandidate);
   });
 }
