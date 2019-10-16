@@ -610,9 +610,10 @@ export class EasyInclude {
 
     this._currentFileName = textEditor.document.fileName;
     this._currentItems = [];
-    this._quickPick.value = "";
     this.addGeneralIncludesToQuickPick();
     this.addFileSpecificIncludesToQuickPick();
+    this._quickPick.value = "";
     this._quickPick.show();
+    this._quickPick.value = "#include <";
   }
 }
