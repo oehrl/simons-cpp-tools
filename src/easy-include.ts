@@ -3,7 +3,8 @@ import * as vscode from 'vscode';
 import { open, readFile, exists, readFileSync, existsSync, fstat, readdir } from "fs";
 import * as path from 'path';
 import * as glob from "glob";
-import { buildGlobForExtensions, headerExtensions } from "./source-info";
+import { buildGlobForExtensions, headerExtensions, isHeaderFile } from "./source-info";
+import { getCorrespondingSourceFile } from "./header-source-switch";
 
 export interface IncludeInsertion {
   offset: number;
@@ -483,7 +484,7 @@ export class EasyInclude {
     }
   }
 
-  private addIncludesToQuickPick() {
+  private async addFileSpecificIncludesToQuickPick() {
     for (const include of systemIncludes) {
       this._currentItems.push({
         label: `#include <${include}>`
@@ -491,7 +492,14 @@ export class EasyInclude {
     }
     this._quickPick.items = this._currentItems;
 
-    const compileCommands = this._compileCommands[this._currentFileName] || [];
+    let fileName = this._currentFileName;
+    if (isHeaderFile(fileName)) {
+      const uri = await getCorrespondingSourceFile(fileName);
+      if (uri) {
+        fileName = uri.fsPath;
+      }
+    }
+    const compileCommands = this._compileCommands[fileName] || [];
     for (const command of compileCommands) {
       this.addIncludeForCompileCommand(command);
     }
@@ -540,7 +548,7 @@ export class EasyInclude {
     this._currentFileName = textEditor.document.fileName;
     this._currentItems = [];
     this._quickPick.value = "";
-    this.addIncludesToQuickPick();
+    this.addFileSpecificIncludesToQuickPick();
     this._quickPick.show();
   }
 }
